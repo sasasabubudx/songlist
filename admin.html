@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>莎莎的歌單</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="min-h-screen p-5 md:p-10 font-sans bg-no-repeat bg-cover bg-center bg-fixed" 
+      style="background-image: url('background.png');">
+
+    <div class="max-w-4xl mx-auto text-center mb-8 bg-white/40 backdrop-blur-sm py-4 rounded-xl shadow-sm">
+        <h1 class="text-3xl font-bold text-sky-600 mb-2">🎵 莎莎的歌單</h1>
+        <p class="text-gray-600 text-sm">歡迎點歌！支援歌名/歌手搜尋，標籤還可以「多選」複合篩選喔！</p>
+    </div>
+
+    <div id="mainContent" class="max-w-4xl mx-auto bg-white rounded-2xl shadow-xl p-6 transition-all duration-300">
+        <div class="flex flex-col md:flex-row gap-4 mb-6">
+            <input type="text" id="searchInput" placeholder="輸入歌名或歌手進行搜尋..." class="flex-1 border-2 border-sky-200 rounded-lg px-4 py-2 focus:outline-none focus:border-sky-500 text-gray-700">
+            <select id="sortSelect" class="border-2 border-sky-200 rounded-lg px-4 py-2 text-gray-700 focus:outline-none focus:border-sky-500">
+                <option value="default">預設排序（依編號）</option>
+                <option value="title">依歌名排序</option>
+                <option value="artist">依歌手排序</option>
+            </select>
+        </div>
+
+        <div class="mb-6 bg-sky-50/50 p-4 rounded-xl border border-sky-100">
+            <div class="flex justify-between items-center mb-2">
+                <span class="text-sm font-bold text-sky-800">按標籤篩選（可多選）：</span>
+                <button onclick="clearSelectedTags()" class="text-xs text-sky-600 hover:text-sky-800 hover:underline">🔄 重設所有標籤</button>
+            </div>
+            <div id="tagContainer" class="flex flex-wrap gap-2"></div>
+        </div>
+
+        <div class="text-sm text-gray-500 mb-4">
+            目前符合條件：<span id="songCount" class="font-bold text-sky-600">0</span> 首歌曲
+        </div>
+
+        <div class="overflow-x-auto rounded-lg border border-gray-200">
+            <table class="min-w-full divide-y divide-gray-200 text-left text-sm text-gray-700">
+                <thead class="bg-sky-100">
+                    <tr>
+                        <th class="px-4 py-3 font-semibold text-sky-700 w-20">編號</th>
+                        <th class="px-4 py-3 font-semibold text-sky-700">歌名</th>
+                        <th class="px-4 py-3 font-semibold text-sky-700">歌手</th>
+                        <th class="px-4 py-3 font-semibold text-sky-700">標籤</th>
+                        <th class="px-4 py-3 font-semibold text-sky-700">備註</th>
+                    </tr>
+                </thead>
+                <tbody id="songTableBody" class="divide-y divide-gray-200">
+                    <tr>
+                        <td colspan="5" class="px-4 py-8 text-center text-gray-400">正在自動讀取最新歌單中... 🕒</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        let songData = [];
+        let activeSelectedTags = []; 
+        let globalAllTags = []; // 儲存全部標籤的全域變數，修正多選卡住的問題
+
+        const songTableBody = document.getElementById("songTableBody");
+        const searchInput = document.getElementById("searchInput");
+        const sortSelect = document.getElementById("sortSelect");
+        const tagContainer = document.getElementById("tagContainer");
+        const songCount = document.getElementById("songCount");
+
+        function formatNumber(num) { return `#${String(num).padStart(3, '0')}`; }
+
+        // 🚀 【核心自動化】網頁打開時，自動抓取同資料夾底下的 song-data.json
+        async function loadSongData() {
+            try {
+                const response = await fetch('song-data.json');
+                if (!response.ok) {
+                    throw new Error('找不到 song-data.json 檔案');
+                }
+                songData = await response.json();
+                
+                // 讀取成功後，初始化標籤與表格
+                initTags();
+                renderTable();
+                
+            } catch (error) {
+                console.error(error);
+                songTableBody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="px-4 py-8 text-center text-red-500 font-medium">
+                            ⚠️ 讀取歌單失敗！<br>
+                            <span class="text-xs text-gray-500 block mt-1">本地雙擊打開會因瀏覽器安全限制而失敗。上傳到 GitHub Pages 就會正常運作囉！</span>
+                        </td>
+                    </tr>`;
+            }
+        }
+
+        function initTags() {
+            globalAllTags = [];
+            songData.forEach(song => {
+                if(song.tags) {
+                    song.tags.forEach(tag => { if(tag && !globalAllTags.includes(tag)) globalAllTags.push(tag); });
+                }
+            });
+            renderTagButtons();
+        }
+
+        function renderTagButtons() {
+            tagContainer.innerHTML = globalAllTags.map(tag => {
+                const isSelected = activeSelectedTags.includes(tag);
+                return `<button onclick="toggleTagFilter('${tag}')" class="px-3 py-1.5 text-xs rounded-full border transition-all duration-200 font-medium ${isSelected ? 'bg-sky-500 border-sky-400 text-white font-bold' : 'bg-white border-sky-200 text-sky-700 hover:bg-sky-50'}">${isSelected ? '✓ ' : ''}${tag}</button>`;
+            }).join('');
+        }
+
+        function toggleTagFilter(tag) {
+            if (activeSelectedTags.includes(tag)) {
+                activeSelectedTags = activeSelectedTags.filter(t => t !== tag);
+            } else {
+                activeSelectedTags.push(tag);
+            }
+            renderTagButtons();
+            renderTable();
+        }
+
+        function clearSelectedTags() {
+            activeSelectedTags = [];
+            renderTagButtons();
+            renderTable();
+        }
+
+        function renderTable() {
+            const searchText = searchInput.value.toLowerCase();
+            const sortBy = sortSelect.value;
+            let displayList = songData.map((song, index) => ({ ...song, displayCode: formatNumber(index + 1) }));
+
+            displayList = displayList.filter(song => {
+                const matchesSearch = song.title.toLowerCase().includes(searchText) || song.artist.toLowerCase().includes(searchText) || song.displayCode.includes(searchText);
+                let matchesTags = true;
+                if (activeSelectedTags.length > 0) {
+                    matchesTags = activeSelectedTags.every(neededTag => song.tags && song.tags.includes(neededTag));
+                }
+                return matchesSearch && matchesTags;
+            });
+
+            if (sortBy === "title") displayList.sort((a, b) => a.title.localeCompare(b.title, "zh-TW"));
+            else if (sortBy === "artist") displayList.sort((a, b) => a.artist.localeCompare(b.artist, "zh-TW"));
+
+            songCount.innerText = displayList.length;
+            if (displayList.length === 0) {
+                songTableBody.innerHTML = `<tr><td colspan="5" class="px-4 py-8 text-center text-gray-400">找不到符合條件的歌曲 😭</td></tr>`;
+                return;
+            }
+
+            songTableBody.innerHTML = displayList.map(song => `
+                <tr class="hover:bg-sky-50/50 transition-colors">
+                    <td class="px-4 py-3 font-mono text-sky-600 font-bold">${song.displayCode}</td>
+                    <td class="px-4 py-3 font-medium text-gray-900">${song.title}</td>
+                    <td class="px-4 py-3 text-gray-600">${song.artist}</td>
+                    <td class="px-4 py-3">${song.tags ? song.tags.map(t => `<span class="inline-block bg-sky-100 text-sky-700 text-xs px-2 py-0.5 rounded mr-1">${t}</span>`).join('') : ''}</td>
+                    <td class="px-4 py-3 text-xs text-gray-500">${song.note || '-'}</td>
+                </tr>
+            `).join('');
+        }
+
+        searchInput.addEventListener("input", renderTable);
+        sortSelect.addEventListener("change", renderTable);
+
+        // 🚀 網頁載入時立刻執行自動讀取功能
+        loadSongData();
+    </script>
+</body>
+</html>
