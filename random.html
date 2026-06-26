@@ -3,184 +3,136 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🎵 隨機點歌</title>
+    <title>莎莎的珍奶抽歌機 🎲</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-sky-50 min-h-screen p-5 md:p-10 font-sans">
 
-    <div class="max-w-3xl mx-auto text-center mb-8">
-        <h1 class="text-3xl font-bold text-sky-600 mb-2"> 隨機點歌</h1>
-        <p class="text-gray-600 text-sm">今天想聽點什麼？設定好條件，讓命運幫你決定歌單！</p>
+<body class="min-h-screen p-5 md:p-10 font-sans bg-[#F3E9DC] text-[#4A3728] bg-no-repeat bg-cover bg-center bg-fixed"
+      
+
+    <div class="max-w-md mx-auto mb-6 text-center">
+        <a href="index.html" class="inline-flex items-center gap-2 bg-[#8C7863] hover:bg-[#73604E] text-white text-xs font-bold px-4 py-2 rounded-full shadow-md transition-all">
+            ⬅️ 返回 莎莎的歌單 
+        </a>
     </div>
 
-    <div class="max-w-3xl mx-auto bg-white rounded-2xl shadow-xl p-6 mb-6">
-        <h2 class="text-lg font-bold text-sky-800 mb-4 flex items-center gap-2">
-            ⚙️ 抽籤條件設定
-        </h2>
-        
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-2">1. 想要抽出幾首歌？</label>
-                <div class="flex items-center gap-3">
-                    <input 
-                        type="number" 
-                        id="drawCountInput" 
-                        value="1" 
-                        min="1" 
-                        max="50" 
-                        class="w-24 border-2 border-sky-200 rounded-lg px-3 py-1.5 text-center font-bold text-sky-600 text-lg focus:outline-none focus:border-sky-500"
-                    >
-                    <span class="text-gray-600 font-medium">首歌曲</span>
-                </div>
-                <p class="text-xs text-gray-400 mt-1">預設為 1 首，最高可連續抽 50 首。</p>
-            </div>
+    <div class="max-w-md mx-auto bg-[#FFFDF9]/90 backdrop-blur-sm rounded-3xl shadow-xl border-4 border-[#8C7863] p-6 text-center">
+        <h1 class="text-3xl font-bold text-[#5C4033] mb-1">🧋客製化專屬特調！</h1>
+        <p class="text-xs text-[#8C7863] mb-4"></p>
 
+        <div class="bg-[#FDF8F2] border-2 border-[#E6D5C3] rounded-2xl p-4 text-left mb-6 space-y-4">
             <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-2">2. 限定歌曲分類（標籤）嗎？</label>
-                <select 
-                    id="tagSelect" 
-                    class="w-full border-2 border-sky-200 rounded-lg px-3 py-2 text-gray-700 focus:outline-none focus:border-sky-500 font-medium"
-                >
-                    <option value="全部">不限分類（從全部歌單隨機抽）</option>
-                    </select>
-                <p class="text-xs text-gray-400 mt-1">選定分類後，只會從該分類中隨機挑選。</p>
+                <span class="text-xs font-bold text-[#73604E] block mb-2">⭐ </span>
+                <div id="langTagContainer" class="flex flex-wrap gap-2"></div>
+            </div>
+            <div>
+                <span class="text-xs font-bold text-[#73604E] block mb-2">🍬 </span>
+                <div id="sugarTagContainer" class="flex flex-wrap gap-2"></div>
             </div>
         </div>
 
-        <div class="mt-8 text-center">
-            <button 
-                onclick="drawSongs()" 
-                id="drawBtn" 
-                disabled
-                class="bg-sky-500 hover:bg-sky-600 disabled:bg-gray-300 text-white font-bold text-lg px-10 py-3 rounded-xl shadow-lg transition-all duration-200 transform hover:scale-105 active:scale-95"
-            >
-                🚀 測試好運，開始抽歌！
-            </button>
-        </div>
-    </div>
+        <button onclick="drawSong()" id="drawBtn" class="w-full bg-[#362517] hover:bg-[#21150B] text-[#FFFDF9] font-bold py-4 rounded-2xl shadow-lg transition-all transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2 text-lg">
+            🧋🧋🧋
+        </button>
 
-    <div id="resultSection" class="max-w-3xl mx-auto bg-gradient-to-br from-sky-400 to-indigo-500 rounded-2xl shadow-xl p-6 text-white hidden">
-        <h2 class="text-xl font-bold mb-4 flex justify-between items-center border-b border-white/20 pb-2">
-            <span>🎉 本次幸運生成的歌單</span>
-            <span id="resultCountBadge" class="text-xs bg-white text-sky-600 px-2.5 py-1 rounded-full font-bold"></span>
-        </h2>
-        
-        <div id="resultList" class="space-y-3">
-            </div>
+        <div id="loadingStatus" class="hidden my-8 text-[#8C7863] font-bold text-sm animate-bounce">
+            🧋 正在努力幫妳搖珍奶中... 🥤
+        </div>
+
+        <div id="resultCard" class="hidden mt-6 bg-gradient-to-br from-[#FAF0E6] to-[#FFF8DC] border-2 border-[#CD853F] rounded-2xl p-6 shadow-inner transition-all duration-500">
+            <span class="inline-block bg-[#D2B48C] text-[#5C4033] text-xs font-mono font-bold px-3 py-1 rounded-full mb-3" id="resCode">#000</span>
+            <h2 class="text-2xl font-bold text-[#362517] mb-1" id="resTitle">歌曲名稱</h2>
+            <p class="text-base text-[#73604E] mb-3" id="resArtist">歌手姓名</p>
+            <div id="resTags" class="flex justify-center flex-wrap gap-1 mb-3"></div>
+            <p class="text-xs text-[#A08870] italic border-t border-[#E6D5C3] pt-3" id="resNote">-</p>
+        </div>
     </div>
 
     <script>
         let songData = [];
+        let activeSelectedTags = [];
 
-        const tagSelect = document.getElementById("tagSelect");
-        const drawCountInput = document.getElementById("drawCountInput");
-        const resultSection = document.getElementById("resultSection");
-        const resultList = document.getElementById("resultList");
-        const resultCountBadge = document.getElementById("resultCountBadge");
-        const drawBtn = document.getElementById("drawBtn");
+        const langOrder = ["中文", "日文", "台語", "合唱"];
+        const sugarOrder = ["無糖", "三分糖", "半糖", "七分糖", "全糖"];
+
+        const langTagContainer = document.getElementById("langTagContainer");
+        const sugarTagContainer = document.getElementById("sugarTagContainer");
+        const resultCard = document.getElementById("resultCard");
+        const loadingStatus = document.getElementById("loadingStatus");
 
         function formatNumber(num) { return `#${String(num).padStart(3, '0')}`; }
 
-        // 🚀 自動跟隔壁的 song-data.json 檔案讀取歌單
+        // 🚀 從同目錄下的 song-data.json 秒讀取
         async function loadSongData() {
             try {
                 const response = await fetch('song-data.json');
-                if (!response.ok) throw new Error('找不到 json 檔案');
                 songData = await response.json();
-                
-                // 成功讀取後啟用按鈕並初始化分類選單
-                drawBtn.disabled = false;
-                initTagSelect();
+                renderTagButtons();
             } catch (error) {
-                console.error(error);
-                alert("❌ 讀取歌單失敗！請確保資料夾中含有 'song-data.json'。");
+                console.error("讀取失敗:", error);
             }
         }
 
-        // 把歌單裡所有的標籤抓出來塞進下拉選單
-        function initTagSelect() {
-            const allTags = [];
-            songData.forEach(song => {
-                if(song.tags) {
-                    song.tags.forEach(tag => { if(tag && !allTags.includes(tag)) allTags.push(tag); });
-                }
-            });
+        function renderTagButtons() {
+            langTagContainer.innerHTML = langOrder.map(tag => {
+                const isSelected = activeSelectedTags.includes(tag);
+                return `<button onclick="toggleTagFilter('${tag}')" class="w-12 h-12 text-[11px] rounded-full flex items-center justify-center border-2 shadow-sm transition-all duration-200 font-bold leading-tight ${isSelected ? 'bg-[#362517] border-[#21150B] text-[#FFFDF9] scale-110 ring-2 ring-[#8C7863]' : 'bg-[#E6D5C3] border-[#C4B29E] text-[#5C4033] hover:bg-[#DBCA9E]' }">${tag}</button>`;
+            }).join('');
+
+            sugarTagContainer.innerHTML = sugarOrder.map(tag => {
+                const isSelected = activeSelectedTags.includes(tag);
+                return `<button onclick="toggleTagFilter('${tag}')" class="w-12 h-12 text-[11px] rounded-full flex items-center justify-center border-2 shadow-sm transition-all duration-200 font-bold leading-tight ${isSelected ? 'bg-[#5C4033] border-[#362517] text-[#FFFDF9] scale-110 ring-2 ring-[#CD853F]' : 'bg-[#F5E1D3] border-[#E2C6B1] text-[#73604E] hover:bg-[#EED5C5]' }">${tag}</button>`;
+            }).join('');
+        }
+
+        function toggleTagFilter(tag) {
+            if (activeSelectedTags.includes(tag)) {
+                activeSelectedTags = activeSelectedTags.filter(t => t !== tag);
+            } else {
+                activeSelectedTags.push(tag);
+            }
+            renderTagButtons();
+        }
+
+        function drawSong() {
+            resultCard.classList.add("hidden");
             
-            allTags.forEach(tag => {
-                const option = document.createElement("option");
-                option.value = tag;
-                option.innerText = `限定：【${tag}】`;
-                tagSelect.appendChild(option);
+            let filteredList = songData.filter(song => {
+                if (activeSelectedTags.length === 0) return true;
+                return activeSelectedTags.every(neededTag => song.tags && song.tags.includes(neededTag));
             });
-        }
 
-        // 🔥 核心功能：隨機抽歌邏輯
-        function drawSongs() {
-            const count = parseInt(drawCountInput.value) || 1;
-            const selectedTag = tagSelect.value;
-
-            if (count < 1) { alert("請輸入至少要抽 1 首歌曲！"); return; }
-
-            // Step 1: 先根據「分類」過濾出候選歌曲池
-            let pool = songData.map((song, index) => ({ ...song, displayCode: formatNumber(index + 1) }));
-            if (selectedTag !== "全部") {
-                pool = pool.filter(song => song.tags && song.tags.includes(selectedTag));
-            }
-
-            if (pool.length === 0) {
-                alert(`😭 糟了！分類【${selectedTag}】裡面沒有任何歌曲，無法抽取。`);
+            if (filteredList.length === 0) {
+                alert("😭 糟糕！這款配方的珍奶目前沒有符合的歌曲，改一下標籤試試看吧！");
                 return;
             }
 
-            // 如果想要抽的數量大於歌曲池總數，就調整為歌曲池上限
-            const finalCount = Math.min(count, pool.length);
-            if (count > pool.length) {
-                alert(`提示：目前分類中只有 ${pool.length} 首歌，系統將為你抽出全部歌曲！`);
-                drawCountInput.value = pool.length;
-            }
+            const drawBtn = document.getElementById("drawBtn");
+            drawBtn.disabled = true;
+            loadingStatus.classList.remove("hidden");
 
-            // Step 2: 洗牌演算法（Fisher-Yates Shuffle）隨機打亂歌曲池
-            for (let i = pool.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [pool[i], pool[j]] = [pool[j], pool[i]];
-            }
+            setTimeout(() => {
+                const randomIndex = Math.floor(Math.random() * filteredList.length);
+                const luckySong = filteredList[randomIndex];
+                
+                const originalIndex = songData.findIndex(s => s.title === luckySong.title && s.artist === luckySong.artist);
 
-            // Step 3: 切出前幾首作為中獎歌曲
-            const winners = pool.slice(0, finalCount);
+                document.getElementById("resCode").innerText = luckySong.code ? formatNumber(luckySong.code) : formatNumber(originalIndex + 1);
+                document.getElementById("resTitle").innerText = luckySong.title;
+                document.getElementById("resArtist").innerText = luckySong.artist;
+                document.getElementById("resNote").innerText = luckySong.note ? `💡 備註：${luckySong.note}` : `隨機特調，祝聽歌愉快 🖤`;
+                
+                document.getElementById("resTags").innerHTML = luckySong.tags ? luckySong.tags.map(t => {
+                    const isSugar = sugarOrder.includes(t);
+                    return `<span class="text-[10px] px-2 py-0.5 rounded-full ${isSugar ? 'bg-[#F5E1D3] text-[#73604E]' : 'bg-[#E6D5C3] text-[#5C4033]'} font-bold border border-black/5">${t}</span>`;
+                }).join('') : '';
 
-            // Step 4: 把結果渲染到畫面上
-            renderResults(winners);
+                loadingStatus.classList.add("hidden");
+                resultCard.classList.remove("hidden");
+                drawBtn.disabled = false;
+            }, 1000); 
         }
 
-        // 渲染結果畫面
-        function renderResults(winners) {
-            resultCountBadge.innerText = `共抽出 ${winners.length} 首`;
-            
-            resultList.innerHTML = winners.map((song, i) => `
-                <div class="flex items-center justify-between bg-white/10 backdrop-blur-md p-4 rounded-xl border border-white/20 transform animate-fade-in-up">
-                    <div class="flex items-center gap-4">
-                        <span class="bg-white text-indigo-600 font-mono font-bold text-sm w-8 h-8 rounded-full flex items-center justify-center shadow">
-                            ${i + 1}
-                        </span>
-                        <div>
-                            <div class="font-bold text-lg text-white drop-shadow">${song.title}</div>
-                            <div class="text-xs text-sky-100 mt-0.5">原歌單編號：${song.displayCode} | 歌手：${song.artist}</div>
-                        </div>
-                    </div>
-                    <div class="flex flex-wrap gap-1 justify-end max-w-[200px]">
-                        ${song.tags ? song.tags.map(t => `<span class="bg-indigo-700/50 text-sky-200 text-[10px] px-2 py-0.5 rounded">${t}</span>`).join('') : ''}
-                    </div>
-                </div>
-            `).join('');
-
-            // 打開隱藏的結果區塊
-            resultSection.classList.remove("hidden");
-            
-            // 貼心自動捲動到結果區給你看
-            resultSection.scrollIntoView({ behavior: 'smooth' });
-        }
-
-        // 頁面啟動讀取
         loadSongData();
     </script>
 </body>
