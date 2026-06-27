@@ -18,9 +18,8 @@
             background-position: center;
             z-index: -1;
             transform: translate3d(0, 0, 0);
-            transition: transform 0.2s cubic-bezier(0.25, 1, 0.5, 1); /* 讓晃動有絲滑的緩衝感 */
+            /* 💡 使用 JS 核心控制平滑度，這裡保持基本 will-change 確保 iPhone 渲染流暢 */
             will-change: transform;
-            /* 📱 針對 iOS Safari 優化，防止晃動時畫面閃爍 */
             -webkit-transform: translate3d(0, 0, 0);
         }
     </style>
@@ -36,10 +35,10 @@
             <p>「 喜歡你的心情是七分甜 」</p>
         </div>
         
-        <p class="text-gray-600 text-xs mt-3 mb-1 font-medium">不知道要點什麼嗎，可以點進隨機點歌系統</p>
+        <p class="text-gray-600 text-xs mt-3 mb-1 font-medium">不知道要點什麼嗎，可以點進隨機抽歌系統</p>
         
         <div class="flex justify-center mt-2">
-            <a href="random.html" id="randomBtn" onclick="handleRandomClick(event)" class="inline-flex items-center gap-2 bg-gradient-to-r from-sky-500 to-indigo-500 hover:from-sky-600 hover:to-indigo-600 text-white text-xs font-bold px-4 py-2 rounded-full shadow-md transition-all transform hover:scale-105">
+            <a href="random.html" class="inline-flex items-center gap-2 bg-gradient-to-r from-sky-500 to-indigo-500 hover:from-sky-600 hover:to-indigo-600 text-white text-xs font-bold px-4 py-2 rounded-full shadow-md transition-all transform hover:scale-105">
                 🌠 隨機點歌系統
             </a>
         </div>
@@ -196,58 +195,71 @@
             `).join('');
         }
     
-        // 👁️ 3D 視差主核心
+        // 👁️ 絲滑平移視差核心設定
+        let targetX = 0, targetY = 0; // 目標物理位移像素
+        let currentX = 0, currentY = 0; // 目前渲染的物理位移像素
+        const easeAmount = 0.08; // 💡 數值越小越絲滑慢速，數值越大越靈敏 (建議 0.05 ~ 0.1)
+        const maxMovePx = 35; // 💡 嚴格限制：上下左右平移最多絕對不超過 35 像素，防止畫面暴走
+
         function initParallax() {
             const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 
             if (!isTouchDevice) {
-                // 💻 電腦版：偵測滑鼠微幅晃動
+                // 💻 電腦版：滑鼠游標微幅平移
                 window.addEventListener('mousemove', (e) => {
-                    const moveX = (e.clientX - window.innerWidth / 2) / window.innerWidth * 30;
-                    const moveY = (e.clientY - window.innerHeight / 2) / window.innerHeight * 30;
-                    parallaxBg.style.transform = `translate3d(${moveX}px, ${moveY}px, 0)`;
+                    targetX = (e.clientX - window.innerWidth / 2) / (window.innerWidth / 2) * maxMovePx;
+                    targetY = (e.clientY - window.innerHeight / 2) / (window.innerHeight / 2) * maxMovePx;
                 });
             } else {
-                // 📱 手機版：如果是已經拿過權限的狀態就自動監聽（適用 Android 或重複造訪的 iOS）
-                if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission !== 'function') {
+                // 📱 手機版：一進入主歌單網頁，直接觸發權限詢問
+                if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+                    // 為了符合 iOS 規定「必須由使用者點擊引導」，我們在使用者第一次點擊網頁任意地方時跳出詢問
+                    const askPermissionOnce = () => {
+                        DeviceOrientationEvent.requestPermission()
+                            .then(response => {
+                                if (response === 'granted') {
+                                    window.addEventListener('deviceorientation', handleOrientation);
+                                }
+                            })
+                            .catch(console.error);
+                        // 詢問過一次後就拆除網頁點擊監聽，不打擾後續操作
+                        window.removeEventListener('click', askPermissionOnce);
+                        window.removeEventListener('touchstart', askPermissionOnce);
+                    };
+                    window.addEventListener('click', askPermissionOnce);
+                    window.addEventListener('touchstart', askPermissionOnce);
+                } else {
+                    // 非 iOS 手機直接開跑
                     window.addEventListener('deviceorientation', handleOrientation);
                 }
             }
+
+            // 🚀 啟動無盡動畫循環，達成極致絲滑的阻尼滑動感
+            function animate() {
+                // 數學核心：目前的座標向目標座標緩慢前進 (Lerp 公式)
+                currentX += (targetX - currentX) * easeAmount;
+                currentY += (targetY - currentY) * easeAmount;
+
+                // 僅使用平移，絕不放大縮小
+                parallaxBg.style.transform = `translate3d(${currentX}px, ${currentY}px, 0)`;
+                requestAnimationFrame(animate);
+            }
+            requestAnimationFrame(animate);
         }
 
-        // 陀螺儀數據處理邏輯
+        // 陀螺儀數據平滑對應
         function handleOrientation(e) {
             if (e.gamma !== null && e.beta !== null) {
-                const moveX = (e.gamma) * 0.8; 
-                const moveY = (e.beta - 45) * 0.8; 
-                parallaxBg.style.transform = `translate3d(${moveX}px, ${moveY}px, 0)`;
-            }
-        }
+                // 將手機擺動的角度，映射到我們限制的 maxMovePx 平移範圍內
+                // gamma 左右傾斜常態在 -30 到 30 之間
+                // beta 前後傾斜常態在 15 到 75 之間 (扣除拿手機自然視角 45 度)
+                let calcX = e.gamma * 1.2;
+                let calcY = (e.beta - 45) * 1.2;
 
-        // 🔒 ✨ 按下「隨機點歌系統」按鈕時的複合處理邏輯
-        function handleRandomClick(event) {
-            const targetUrl = event.currentTarget.getAttribute('href');
-            
-            // 判斷是否為需要授權的 iPhone (iOS 13+)
-            if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-                // 暫停原本的網頁跳轉行為，先跟 iPhone 討權限
-                event.preventDefault();
-                
-                DeviceOrientationEvent.requestPermission()
-                    .then(response => {
-                        // 不管使用者是點「允許」還是「拒絕」，下一步都要順利帶他去隨機點歌頁面
-                        if (response === 'granted') {
-                            window.addEventListener('deviceorientation', handleOrientation);
-                        }
-                        // 轉場到下一頁
-                        window.location.href = targetUrl;
-                    })
-                    .catch(error => {
-                        console.error(error);
-                        window.location.href = targetUrl;
-                    });
+                // 嚴格截斷，不讓背景平移超出安全範圍
+                targetX = Math.max(-maxMovePx, Math.min(maxMovePx, calcX));
+                targetY = Math.max(-maxMovePx, Math.min(maxMovePx, calcY));
             }
-            // 如果不是 iPhone，就會直接正常的跳轉到 random.html，一切順暢！
         }
 
         searchInput.addEventListener("input", renderTable);
