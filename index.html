@@ -5,10 +5,28 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>莎莎的歌單</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* 🌌 讓背景變成獨立圖層，並強制固定在最底層不隨頁面滾動 */
+        .parallax-bg {
+            position: fixed;
+            top: -10%;
+            left: -10%;
+            width: 120%;
+            height: 120%;
+            background-image: url('background.jpg');
+            background-size: cover;
+            background-position: center;
+            z-index: -1;
+            transform: translate3d(0, 0, 0);
+            transition: transform 0.2s cubic-bezier(0.25, 1, 0.5, 1); /* 讓晃動有絲滑的緩衝感 */
+            will-change: transform;
+        }
+    </style>
 </head>
 
-<body class="min-h-screen p-5 md:p-10 font-sans bg-no-repeat bg-cover bg-center bg-fixed" 
-      style="background-image: url('background.jpg');">
+<body class="min-h-screen p-5 md:p-10 font-sans">
+
+    <div id="parallaxBg" class="parallax-bg"></div>
 
     <div class="max-w-4xl mx-auto text-center mb-8 bg-white/40 backdrop-blur-sm py-6 px-4 rounded-xl shadow-sm">
         <h1 class="text-3xl font-bold text-sky-600 mb-2">🌌 莎莎的歌單 🌌</h1>
@@ -88,6 +106,9 @@
         const langTagContainer = document.getElementById("langTagContainer");
         const sugarTagContainer = document.getElementById("sugarTagContainer");
         const songCount = document.getElementById("songCount");
+        
+        // ✨ 修正處：在腳本中抓取我們新增的背景元件
+        const parallaxBg = document.getElementById("parallaxBg");
 
         function formatNumber(num) { return `#${String(num).padStart(3, '0')}`; }
 
@@ -173,6 +194,28 @@
                     <td class="px-4 py-3 text-xs text-gray-500">${song.note || '-'}</td>
                 </tr>
             `).join('');
+        }
+    
+        // 👁️ 3D 視差微晃動魔法指令區（支援滑鼠移動與手機陀螺儀）
+        const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+
+        if (!isTouchDevice) {
+            // 💻 電腦版：偵測滑鼠位置微幅晃動
+            window.addEventListener('mousemove', (e) => {
+                const moveX = (e.clientX - window.innerWidth / 2) / window.innerWidth * 30; // 調整最後的數字可以控制晃動幅度
+                const moveY = (e.clientY - window.innerHeight / 2) / window.innerHeight * 30;
+                parallaxBg.style.transform = `translate3d(${moveX}px, ${moveY}px, 0)`;
+            });
+        } else {
+            // 📱 手機版：監聽行動裝置的擺動（陀螺儀）
+            window.addEventListener('deviceorientation', (e) => {
+                // gamma 是左右傾斜（-90 到 90），beta 是前後傾斜（-180 到 180）
+                if (e.gamma !== null && e.beta !== null) {
+                    const moveX = (e.gamma) * 0.8; 
+                    const moveY = (e.beta - 45) * 0.8; // 扣除一般人拿手機的自然傾斜角度(約45度)
+                    parallaxBg.style.transform = `translate3d(${moveX}px, ${moveY}px, 0)`;
+                }
+            });
         }
 
         searchInput.addEventListener("input", renderTable);
