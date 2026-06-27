@@ -20,7 +20,7 @@
             transform: translate3d(0, 0, 0);
             transition: transform 0.2s cubic-bezier(0.25, 1, 0.5, 1); /* 讓晃動有絲滑的緩衝感 */
             will-change: transform;
-            /* 📱 針對手機瀏覽器優化，防止滾動視差時出現畫面閃爍 */
+            /* 📱 針對 iOS Safari 優化，防止晃動時畫面閃爍 */
             -webkit-transform: translate3d(0, 0, 0);
         }
     </style>
@@ -35,26 +35,27 @@
         <div class="text-gray-700 italic text-sm space-y-1 my-3 py-2 rounded-lg max-w-md mx-auto">
             <p>「 喜歡你的心情是七分甜 」</p>
         </div>
-        <p class="text-gray-600 text-xs mt-2">     </p>
         
-        <div class="flex justify-center mt-4">
-            <a href="random.html" class="inline-flex items-center gap-2 bg-gradient-to-r from-sky-500 to-indigo-500 hover:from-sky-600 hover:to-indigo-600 text-white text-xs font-bold px-4 py-2 rounded-full shadow-md transition-all transform hover:scale-105">
+        <p class="text-gray-600 text-xs mt-3 mb-1 font-medium">不知道要點什麼嗎，可以點進隨機點歌系統</p>
+        
+        <div class="flex justify-center mt-2">
+            <a href="random.html" id="randomBtn" onclick="handleRandomClick(event)" class="inline-flex items-center gap-2 bg-gradient-to-r from-sky-500 to-indigo-500 hover:from-sky-600 hover:to-indigo-600 text-white text-xs font-bold px-4 py-2 rounded-full shadow-md transition-all transform hover:scale-105">
                 🌠 隨機點歌系統
             </a>
         </div>
     </div>
 
-    <div id="mainContent" class="max-w-4xl mx-auto bg-white rounded-2xl shadow-xl p-6 transition-all duration-300">
+    <div id="mainContent" class="max-w-4xl mx-auto bg-white/70 backdrop-blur-[2px] rounded-2xl shadow-xl p-6 transition-all duration-300">
         <div class="flex flex-col md:flex-row gap-4 mb-6">
-            <input type="text" id="searchInput" placeholder="輸入歌名或歌手進行搜尋..." class="flex-1 border-2 border-sky-200 rounded-lg px-4 py-2 focus:outline-none focus:border-sky-500 text-gray-700">
-            <select id="sortSelect" class="border-2 border-sky-200 rounded-lg px-4 py-2 text-gray-700 focus:outline-none focus:border-sky-500">
+            <input type="text" id="searchInput" placeholder="輸入歌名或歌手進行搜尋..." class="flex-1 border-2 border-sky-200 bg-white/80 rounded-lg px-4 py-2 focus:outline-none focus:border-sky-500 text-gray-700">
+            <select id="sortSelect" class="border-2 border-sky-200 bg-white/80 rounded-lg px-4 py-2 text-gray-700 focus:outline-none focus:border-sky-500">
                 <option value="default">預設排序</option>
                 <option value="title">依歌名排序</option>
                 <option value="artist">依歌手排序</option>
             </select>
         </div>
 
-        <div class="mb-6 bg-sky-50/50 p-4 rounded-xl border border-sky-100 space-y-4">
+        <div class="mb-6 bg-sky-50/70 p-4 rounded-xl border border-sky-100 space-y-4">
             <div class="flex justify-between items-center border-b border-sky-100 pb-2">
                 <span class="text-sm font-bold text-sky-800">按標籤篩選（可跨列多選）：</span>
                 <button onclick="clearSelectedTags()" class="text-xs text-sky-600 hover:text-sky-800 hover:underline">🔄 重設所有標籤</button>
@@ -75,9 +76,9 @@
             目前符合條件：<span id="songCount" class="font-bold text-sky-600">0</span> 首歌曲
         </div>
 
-        <div class="overflow-x-auto rounded-lg border border-gray-200">
+        <div class="overflow-x-auto rounded-lg border border-gray-200 bg-white/60">
             <table class="min-w-full divide-y divide-gray-200 text-left text-sm text-gray-700">
-                <thead class="bg-sky-100">
+                <thead class="bg-sky-100/80">
                     <tr>
                         <th class="px-4 py-3 font-semibold text-sky-700 w-20">編號</th>
                         <th class="px-4 py-3 font-semibold text-sky-700">歌名</th>
@@ -108,13 +109,10 @@
         const langTagContainer = document.getElementById("langTagContainer");
         const sugarTagContainer = document.getElementById("sugarTagContainer");
         const songCount = document.getElementById("songCount");
-        
-        // ✨ 修正處：在腳本中抓取我們新增的背景元件
         const parallaxBg = document.getElementById("parallaxBg");
 
         function formatNumber(num) { return `#${String(num).padStart(3, '0')}`; }
 
-        // 🚀 從同目錄下的 song-data.json 讀取（相容 id 格式）
         async function loadSongData() {
             try {
                 const response = await fetch('song-data.json');
@@ -123,6 +121,7 @@
                 
                 renderAllTagGroups();
                 renderTable();
+                initParallax(); // 🚀 初始化視差
             } catch (error) {
                 console.error(error);
                 songTableBody.innerHTML = `<tr><td colspan="5" class="px-4 py-8 text-center text-red-500">⚠️ 讀取歌單失敗！請確認 song-data.json 是否存在。</td></tr>`;
@@ -161,7 +160,6 @@
             const searchText = searchInput.value.toLowerCase();
             const sortBy = sortSelect.value;
             
-            // 將原始歌單保留順序並生成流水號顯示
             let displayList = songData.map((song, index) => ({ ...song, displayCode: formatNumber(index + 1) }));
 
             displayList = displayList.filter(song => {
@@ -198,23 +196,58 @@
             `).join('');
         }
     
-        // 👁️ 修正處：免權限版視差魔法效果控制區
-        const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+        // 👁️ 3D 視差主核心
+        function initParallax() {
+            const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 
-        if (!isTouchDevice) {
-            // 💻 電腦版：偵測滑鼠位置，讓背景微幅晃動
-            window.addEventListener('mousemove', (e) => {
-                const moveX = (e.clientX - window.innerWidth / 2) / window.innerWidth * 30;
-                const moveY = (e.clientY - window.innerHeight / 2) / window.innerHeight * 30;
+            if (!isTouchDevice) {
+                // 💻 電腦版：偵測滑鼠微幅晃動
+                window.addEventListener('mousemove', (e) => {
+                    const moveX = (e.clientX - window.innerWidth / 2) / window.innerWidth * 30;
+                    const moveY = (e.clientY - window.innerHeight / 2) / window.innerHeight * 30;
+                    parallaxBg.style.transform = `translate3d(${moveX}px, ${moveY}px, 0)`;
+                });
+            } else {
+                // 📱 手機版：如果是已經拿過權限的狀態就自動監聽（適用 Android 或重複造訪的 iOS）
+                if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission !== 'function') {
+                    window.addEventListener('deviceorientation', handleOrientation);
+                }
+            }
+        }
+
+        // 陀螺儀數據處理邏輯
+        function handleOrientation(e) {
+            if (e.gamma !== null && e.beta !== null) {
+                const moveX = (e.gamma) * 0.8; 
+                const moveY = (e.beta - 45) * 0.8; 
                 parallaxBg.style.transform = `translate3d(${moveX}px, ${moveY}px, 0)`;
-            });
-        } else {
-            // 📱 手機版（含 iPhone）：不需要開關與授權！直接監聽網頁上下捲動
-            window.addEventListener('scroll', () => {
-                const scrolled = window.pageYOffset;
-                // 💡 0.12 可以調整手機滑動時背景移動的速度，數字越大背景跟著動得越快
-                parallaxBg.style.transform = `translate3d(0, ${scrolled * 0.12}px, 0)`;
-            });
+            }
+        }
+
+        // 🔒 ✨ 按下「隨機點歌系統」按鈕時的複合處理邏輯
+        function handleRandomClick(event) {
+            const targetUrl = event.currentTarget.getAttribute('href');
+            
+            // 判斷是否為需要授權的 iPhone (iOS 13+)
+            if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+                // 暫停原本的網頁跳轉行為，先跟 iPhone 討權限
+                event.preventDefault();
+                
+                DeviceOrientationEvent.requestPermission()
+                    .then(response => {
+                        // 不管使用者是點「允許」還是「拒絕」，下一步都要順利帶他去隨機點歌頁面
+                        if (response === 'granted') {
+                            window.addEventListener('deviceorientation', handleOrientation);
+                        }
+                        // 轉場到下一頁
+                        window.location.href = targetUrl;
+                    })
+                    .catch(error => {
+                        console.error(error);
+                        window.location.href = targetUrl;
+                    });
+            }
+            // 如果不是 iPhone，就會直接正常的跳轉到 random.html，一切順暢！
         }
 
         searchInput.addEventListener("input", renderTable);
