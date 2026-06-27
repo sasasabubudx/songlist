@@ -20,6 +20,8 @@
             transform: translate3d(0, 0, 0);
             transition: transform 0.2s cubic-bezier(0.25, 1, 0.5, 1); /* 讓晃動有絲滑的緩衝感 */
             will-change: transform;
+            /* 📱 針對手機瀏覽器優化，防止滾動視差時出現畫面閃爍 */
+            -webkit-transform: translate3d(0, 0, 0);
         }
     </style>
 </head>
@@ -196,25 +198,22 @@
             `).join('');
         }
     
-        // 👁️ 3D 視差微晃動魔法指令區（支援滑鼠移動與手機陀螺儀）
+        // 👁️ 修正處：免權限版視差魔法效果控制區
         const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 
         if (!isTouchDevice) {
-            // 💻 電腦版：偵測滑鼠位置微幅晃動
+            // 💻 電腦版：偵測滑鼠位置，讓背景微幅晃動
             window.addEventListener('mousemove', (e) => {
-                const moveX = (e.clientX - window.innerWidth / 2) / window.innerWidth * 30; // 調整最後的數字可以控制晃動幅度
+                const moveX = (e.clientX - window.innerWidth / 2) / window.innerWidth * 30;
                 const moveY = (e.clientY - window.innerHeight / 2) / window.innerHeight * 30;
                 parallaxBg.style.transform = `translate3d(${moveX}px, ${moveY}px, 0)`;
             });
         } else {
-            // 📱 手機版：監聽行動裝置的擺動（陀螺儀）
-            window.addEventListener('deviceorientation', (e) => {
-                // gamma 是左右傾斜（-90 到 90），beta 是前後傾斜（-180 到 180）
-                if (e.gamma !== null && e.beta !== null) {
-                    const moveX = (e.gamma) * 0.8; 
-                    const moveY = (e.beta - 45) * 0.8; // 扣除一般人拿手機的自然傾斜角度(約45度)
-                    parallaxBg.style.transform = `translate3d(${moveX}px, ${moveY}px, 0)`;
-                }
+            // 📱 手機版（含 iPhone）：不需要開關與授權！直接監聽網頁上下捲動
+            window.addEventListener('scroll', () => {
+                const scrolled = window.pageYOffset;
+                // 💡 0.12 可以調整手機滑動時背景移動的速度，數字越大背景跟著動得越快
+                parallaxBg.style.transform = `translate3d(0, ${scrolled * 0.12}px, 0)`;
             });
         }
 
