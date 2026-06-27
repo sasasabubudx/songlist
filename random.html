@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>莎莎的珍奶抽歌機 🎲</title>
+    <title>珍奶抽歌機 🎲</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 
@@ -20,19 +20,20 @@
         <p class="text-xs text-[#8C7863] mb-4">客製化配方，搖出今天的命定歌單</p>
 
         <div class="bg-[#FDF8F2] border-2 border-[#E6D5C3] rounded-2xl p-4 mb-6 space-y-4">
-   		<div class="flex items-center gap-3">
-        		<span class="text-base font-bold shrink-0">⭐</span>
-       			<div id="langTagContainer" class="flex flex-wrap justify-center gap-3 flex-1"></div>
-   		</div>
-   	 	<div class="flex items-center gap-3">
-        		<span class="text-base font-bold shrink-0">🍬</span>
-        		<div id="sugarTagContainer" class="flex flex-wrap justify-center gap-3 flex-1"></div>
-    		</div>
-	    </div>
+            <div class="flex items-center gap-3">
+                <span class="text-base font-bold shrink-0">⭐</span>
+                <div id="langTagContainer" class="flex flex-wrap justify-center gap-3 flex-1"></div>
+            </div>
+            <div class="flex items-center gap-3">
+                <span class="text-base font-bold shrink-0">🍬</span>
+                <div id="sugarTagContainer" class="flex flex-wrap justify-center gap-3 flex-1"></div>
+            </div>
+        </div>
 
         <div class="mb-6 flex items-center justify-center gap-3 bg-[#FDF8F2] border-2 border-[#E6D5C3] rounded-2xl p-3">
             <label for="countSelect" class="text-xs font-bold text-[#73604E]">🛍️ 我想一次點：</label>
-            <select id="countSelect" class="bg-white border border-[#8C7863] text-[#5C4033] rounded-lg px-3 py-1 text-sm font-bold focus:outline-none ring-1 ring-[#8C7863]/30">
+            <!-- 💡 新增 change 事件，讓按鈕文字隨杯數跟著變可愛 -->
+            <select id="countSelect" onchange="updateBtnText()" class="bg-white border border-[#8C7863] text-[#5C4033] rounded-lg px-3 py-1 text-sm font-bold focus:outline-none ring-1 ring-[#8C7863]/30">
                 <option value="1">1 杯特調 (抽 1 首)</option>
                 <option value="2">2 杯特調 (抽 2 首)</option>
                 <option value="3">3 杯特調 (抽 3 首)</option>
@@ -41,7 +42,7 @@
             </select>
         </div>
 
-        <button onclick="drawSong()" id="drawBtn" class="w-full bg-[#362517] hover:bg-[#21150B] text-[#FFFDF9] font-bold py-4 rounded-2xl shadow-lg transition-all transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2 text-lg">
+        <button onclick="drawSong()" id="drawBtn" class="w-full bg-[#362517] hover:bg-[#21150B] text-[#FFFDF9] font-bold py-4 rounded-2xl shadow-lg transition-all transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2 text-base tracking-wide">
             🧋 🧋 🧋
         </button>
 
@@ -59,26 +60,48 @@
         const langOrder = ["中文", "日文", "台語", "合唱"];
         const sugarOrder = ["無糖", "三分糖", "半糖", "七分糖", "全糖"];
 
+        // 📝 莎莎的珍奶抽歌機隨機金句庫（共 11 句）
+        const quotes = [
+            "精心特調，祝有美好的一天 💞",
+            "我有一個超能力，是超喜歡你",
+            "人生無常，大腸包小腸",
+            "吃飽了，才有力氣減肥",
+            "休息是為了不想走路",
+            "我不是肚子餓，只是嘴巴寂寞",
+            "天涯何處無芳草，回眸一笑閃到腰",
+            "薏仁做事薏仁湯，小叮做事小叮噹",
+            "那些朝我潑冷水的人，謝謝你們，我省得回家洗頭。",
+            "別害怕別人怎麼看你，因為沒有人在看你。",
+            "倒了就別急著爬起來，躺著還比較舒服。"
+        ];
+
         const langTagContainer = document.getElementById("langTagContainer");
         const sugarTagContainer = document.getElementById("sugarTagContainer");
         const resultsContainer = document.getElementById("resultsContainer");
         const loadingStatus = document.getElementById("loadingStatus");
         const countSelect = document.getElementById("countSelect");
+        const drawBtn = document.getElementById("drawBtn");
 
         function formatNumber(num) { return `#${String(num).padStart(3, '0')}`; }
 
-        // 🚀 從同目錄下的 song-data.json 讀取（支援原版 id 格式）
+        // 動態更新按鈕文字的裝飾
+        function updateBtnText() {
+            const count = countSelect.value;
+            const boba = "🧋".repeat(Math.min(count, 3));
+            drawBtn.innerHTML = `${boba} 搖出 ${count} 杯特調歌單！`;
+        }
+
         async function loadSongData() {
             try {
                 const response = await fetch('song-data.json');
                 songData = await response.json();
                 renderTagButtons();
+                updateBtnText(); // 初始化按鈕文字
             } catch (error) {
                 console.error("讀取失敗:", error);
             }
         }
 
-        // 渲染圓形按鈕
         function renderTagButtons() {
             langTagContainer.innerHTML = langOrder.map(tag => {
                 const isSelected = activeSelectedTags.includes(tag);
@@ -103,7 +126,6 @@
         function drawSong() {
             resultsContainer.innerHTML = ""; // 清空舊畫面
             
-            // 篩選符合標籤的歌曲
             let filteredList = songData.filter(song => {
                 if (activeSelectedTags.length === 0) return true;
                 return activeSelectedTags.every(neededTag => song.tags && song.tags.includes(neededTag));
@@ -114,28 +136,25 @@
                 return;
             }
 
-            const drawBtn = document.getElementById("drawBtn");
             const desiredCount = parseInt(countSelect.value, 10);
             
             drawBtn.disabled = true;
             loadingStatus.classList.remove("hidden");
 
             setTimeout(() => {
-                // 複製一份清單，防止在連抽時重複選到同一首歌（如果符合條件的歌夠多的話）
                 let pool = [...filteredList];
                 let chosenSongs = [];
 
                 for (let i = 0; i < desiredCount; i++) {
-                    if (pool.length === 0) break; // 防呆：如果 pool 被抽光了就停下
+                    if (pool.length === 0) break; 
                     const randomIndex = Math.floor(Math.random() * pool.length);
                     chosenSongs.push(pool[randomIndex]);
-                    // 如果妳希望同一次點單「不能重複歌曲」，可以把下面這行的註解刪掉：
+                    // 如果不希望同一次連抽時選到重複歌曲，可以把下面這行的註解刪掉：
                     // pool.splice(randomIndex, 1);
                 }
 
                 // 渲染抽出來的所有歌曲卡片
                 resultsContainer.innerHTML = chosenSongs.map((luckySong, idx) => {
-                    // 對齊原版 id 尋找它在原始總歌單裡的流水號位置
                     const originalIndex = songData.findIndex(s => s.id === luckySong.id || (s.title === luckySong.title && s.artist === luckySong.artist));
                     const displayCode = formatNumber(originalIndex + 1);
 
@@ -143,6 +162,10 @@
                         const isSugar = sugarOrder.includes(t);
                         return `<span class="text-[10px] px-2 py-0.5 rounded-full ${isSugar ? 'bg-[#F5E1D3] text-[#73604E]' : 'bg-[#E6D5C3] text-[#5C4033]'} font-bold border border-black/5">${t}</span>`;
                     }).join('') : '';
+
+                    // 🔮 ✨ 核心修改處：每次迭代卡片時，隨機抓取一句語錄
+                    const randomQuoteIndex = Math.floor(Math.random() * quotes.length);
+                    const defaultQuote = quotes[randomQuoteIndex];
 
                     return `
                         <div class="bg-gradient-to-br from-[#FAF0E6] to-[#FFF8DC] border-2 border-[#CD853F] rounded-2xl p-5 shadow-sm text-center transition-all duration-300">
@@ -153,7 +176,8 @@
                             <h2 class="text-xl font-bold text-[#362517] mb-0.5">${luckySong.title}</h2>
                             <p class="text-sm text-[#73604E] mb-2">${luckySong.artist}</p>
                             <div class="flex justify-center flex-wrap gap-1 mb-2">${tagsHtml}</div>
-                            <p class="text-xs text-[#A08870] italic border-t border-[#E6D5C3]/60 pt-2">${luckySong.note ? `💡 備註：${luckySong.note}` : `精心特調，祝有美好的一天 💖`}</p>
+                            <!-- 💡 這裡會動態套用隨機挑選出來的金句喔！ -->
+                            <p class="text-xs text-[#A08870] italic border-t border-[#E6D5C3]/60 pt-2">${luckySong.note ? `💡 備註：${luckySong.note}` : `${defaultQuote}`}</p>
                         </div>
                     `;
                 }).join('');
